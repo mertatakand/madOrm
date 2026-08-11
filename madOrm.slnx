@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="madOrm.Console/madOrm.Console.csproj" Id="30850ec7-7408-4111-900d-16aa3ae33b18" />
   <Project Path="madOrm.Library/madOrm.Library.csproj" />
 </Solution>
