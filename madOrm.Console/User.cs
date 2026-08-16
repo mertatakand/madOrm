@@ -9,9 +9,9 @@ namespace madOrm.Console;
 [TableName("USER", "dbo")]
 internal class User : BaseEntity
 {
-    [ColumnName("id")]
+    [ColumnName("Id")]
     public int Id { get; set; }
 
-    [ColumnName("username")]
+    [ColumnName("UserName")]
     public string UserName { get; set; }
 }

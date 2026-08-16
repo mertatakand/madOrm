@@ -1,4 +1,5 @@
 ﻿using madOrm.Library.Infrastructure.Base;
+using madOrm.Library.Infrastructure.Mapping;
 using madOrm.Library.Interfaces.ColumnNameProviders;
 using madOrm.Library.Interfaces.SqlProviders;
 using madOrm.Library.Interfaces.TableNameProviders;
@@ -23,8 +24,15 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
     public virtual string ToSelect<TEntity>() where TEntity : BaseEntity
     {
         // SELECT * FROM [USER]
-        var sql = SelectBuilder.Build<TEntity>(TableNameProvider, ColumnNameProvider);
-        return sql;
+        var mapping = Mapping.Instance.Get<TEntity>();
+
+        if (mapping?.SelectSql is not null)
+            return mapping.SelectSql;
+
+        mapping ??= Mapping.Instance.SetMapping<TEntity>(TableNameProvider, ColumnNameProvider);
+        mapping.SelectSql = SelectBuilder.Build<TEntity>(TableNameProvider, ColumnNameProvider);
+
+        return mapping.SelectSql;
     }
 
     protected virtual async Task<DbDataReader> GetReader(DbConnection conn, string sql)
@@ -40,11 +48,20 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
 
         await Console.Out.WriteLineAsync($"SQL: \n {sql}");
 
-        return await command.ExecuteReaderAsync();
+        var reader = await command.ExecuteReaderAsync();
+
+        return reader;
     }
 
     protected void SetObject<TEntity>(DbDataReader reader, out IList<TEntity> entities) where TEntity : BaseEntity
     {
+        var objectMap = Mapping.Instance.Get<TEntity>();
+
+        if (!objectMap.ColumnNamePropertyMap.Any())
+        {
+            Mapping.Instance.SetMapping<TEntity>(TableNameProvider, ColumnNameProvider);
+        }
+
         entities = new List<TEntity>();
 
         while (reader.Read())
@@ -52,18 +69,16 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
             var ent = Activator.CreateInstance<TEntity>();
             entities.Add(ent);
 
-            for (int i = 0; i < reader.VisibleFieldCount; i++)
+            for (int i = 0; i < objectMap.ColumnNamePropertyMap.Count; i++)
             {
                 var columnName = reader.GetName(i);
                 var data = reader.GetValue(i);
                 var columnType = reader.GetFieldType(i);
 
-                var prop = ent.GetType().GetProperty(columnName);
+                var prop = objectMap.GetProperty(columnName);
 
                 prop.SetValue(ent, Convert.ChangeType(data, columnType));
-            }
-
-            reader.NextResult();
+            }            
         }
     }
 }

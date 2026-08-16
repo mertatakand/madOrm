@@ -4,10 +4,11 @@ using madOrm.Library.Interfaces.DatabaseProviders;
 
 var context = new MadContext(opt =>
 {
-    opt.UseSqlServer("localhost");
+    opt.UseSqlServer("Server=localhost;Database=ORM;User Id=sa;Password=123456;TrustServerCertificate=True;");
     opt.AddEntity<User>();
 });
 
-var users = context.ReadList<User>();
+var users = await context.ReadList<User>();
+await context.ReadList<User>();
 
 Console.ReadLine();
