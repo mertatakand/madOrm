@@ -1,5 +1,6 @@
 ﻿using madOrm.Library.Infrastructure.Base;
-using madOrm.Library.Infrastructure.Mapping;
+using madOrm.Library.Infrastructure.Mappings;
+using madOrm.Library.Infrastructure.SqlBuilders.Where;
 using madOrm.Library.Interfaces.ColumnNameProviders;
 using madOrm.Library.Interfaces.SqlProviders;
 using madOrm.Library.Interfaces.TableNameProviders;
@@ -8,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace madOrm.Library.Interfaces.DatabaseProviders;
@@ -18,8 +20,10 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
     public ITableNameProvider TableNameProvider { get; set; }
     public IColumnNameProvider ColumnNameProvider { get; set; }
     public ISelectBuilder SelectBuilder { get; set; }
+    public IInsertSqlBuilder InsertSqlBuilder { get; set; }
 
     public abstract Task<IEnumerable<TEntity>> ReadList<TEntity>() where TEntity : BaseEntity;
+    public abstract Task<IEnumerable<TEntity>> ReadList<TEntity>(Expression<Func<TEntity, bool>> expression) where TEntity : BaseEntity;
 
     public virtual string ToSelect<TEntity>() where TEntity : BaseEntity
     {
@@ -35,23 +39,61 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
         return mapping.SelectSql;
     }
 
-    protected virtual async Task<DbDataReader> GetReader(DbConnection conn, string sql)
+    public virtual string ToInsertSql<TEntity>(TEntity entity) where TEntity : BaseEntity
+    {
+        var mapping = Mapping.Instance.Get<TEntity>();
+
+        if (mapping?.InsertSql is not null)
+            return mapping.InsertSql;
+
+        mapping ??= Mapping.Instance.SetMapping<TEntity>(TableNameProvider, ColumnNameProvider);
+
+        mapping.InsertSql = InsertSqlBuilder.Build(entity, TableNameProvider, ColumnNameProvider);
+
+        return mapping.InsertSql;
+    }
+
+    protected virtual async Task<DbDataReader> GetReader(
+            DbConnection conn,
+            string sql,
+            WherePart wherePart = null)
     {
         ArgumentNullException.ThrowIfNull(conn);
 
-        if (conn.State != ConnectionState.Open)
-            await conn.OpenAsync(); // requires open conn
+        if (conn.State != System.Data.ConnectionState.Open)
+            await conn.OpenAsync(); // requires open connection
 
         var command = conn.CreateCommand();
+        var logStr = "";
+        if (wherePart is not null && wherePart.HasSql)
+        {
+            sql += $" WHERE {wherePart.Sql}";
+
+            if (wherePart.Parameters.Any())
+            {
+                if (conn is SqlConnection)
+                {
+                    foreach (var parameter in wherePart.Parameters)
+                    {
+                        var sqlParam = new SqlParameter(parameter.Name, parameter.Value);
+                        command.Parameters.Add(sqlParam);
+                    }
+                }
+                else
+                    throw new NotSupportedException($"{conn.GetType().Name} is not supported yet!");
+
+                logStr += string.Join(",", wherePart.Parameters.Select(i => $"{i.Name}: {i.Value}"));
+            }
+        }
+
+        logStr += $"SQL: \n {sql}";
+        await Console.Out.WriteLineAsync(logStr);
 
         command.CommandText = sql;
 
-        await Console.Out.WriteLineAsync($"SQL: \n {sql}");
-
-        var reader = await command.ExecuteReaderAsync();
-
-        return reader;
+        return command.ExecuteReader();
     }
+
 
     protected void SetObject<TEntity>(DbDataReader reader, out IList<TEntity> entities) where TEntity : BaseEntity
     {
@@ -81,4 +123,6 @@ internal abstract class BaseDatabaseProvider : IDatabaseProvider
             }            
         }
     }
+
+    public abstract Task<int> Insert<TEntity>(TEntity entity) where TEntity : BaseEntity;
 }

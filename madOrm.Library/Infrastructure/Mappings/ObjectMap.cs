@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 
-namespace madOrm.Library.Infrastructure.Mapping;
+namespace madOrm.Library.Infrastructure.Mappings;
 
 internal class ObjectMap
 {
@@ -14,6 +14,7 @@ internal class ObjectMap
 
     public Type Entity { get; set; }
     public string SelectSql { get; set; }
+    public string InsertSql { get; set; }
     public string TableName { get; set; }
     private IEnumerable<string> _columnNames;
 

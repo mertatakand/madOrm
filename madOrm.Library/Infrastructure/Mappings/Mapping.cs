@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace madOrm.Library.Infrastructure.Mapping;
+namespace madOrm.Library.Infrastructure.Mappings;
 
 internal class Mapping
 {

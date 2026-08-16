@@ -18,8 +18,9 @@ public static class MadContextExtensions
             {
                 ConnectionString = connectionString,
                 TableNameProvider = new AnnotationTableNameProvider(),
-                ColumnNameProvider = new AnnotationColumnNameProvider(),
-                SelectBuilder = new DefaultSelectSqlBuilder()
+                ColumnNameProvider = new EntityTypeBuilderProvider(),
+                SelectBuilder = new DefaultSelectSqlBuilder(),
+                InsertSqlBuilder = new DefaultInsertSqlBuilder(),
             };
 
             builder.SetDatabaseProvider(provider);

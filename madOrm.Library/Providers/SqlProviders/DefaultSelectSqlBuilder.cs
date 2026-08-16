@@ -19,7 +19,7 @@ public class DefaultSelectSqlBuilder : ISelectBuilder
         if (columns is not null && columns.Any())
             columnString = string.Join(", ", columns.Select(i => $"[{i}]"));
 
-        var sql = $"SELECT {columnString} FROM {tableName};";
+        var sql = $"SELECT {columnString} FROM {tableName}";
 
         return sql;
     }

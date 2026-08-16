@@ -1,4 +1,5 @@
 ﻿using madOrm.Library.Infrastructure.Base;
+using madOrm.Library.Infrastructure.Configuration;
 using madOrm.Library.Interfaces.DatabaseProviders;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,13 @@ public class MadContextOptionsBuilder : IDisposable
     {
         entities.Add(typeof(TEntity));
         return this;
+    }
+
+    public void AddEntityConfiguration<TEntity>(IEntityTypeConfiguration<TEntity> configuration)
+        where TEntity : BaseEntity
+    {
+        entities.Add(typeof(TEntity));
+        configuration.Build(new EntityTypeBuilder<TEntity>());
     }
 
     public MadContextOptionsBuilder SetDatabaseProvider(IDatabaseProvider provider)
